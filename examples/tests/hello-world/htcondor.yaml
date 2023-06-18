@@ -1,0 +1,23 @@
+apiVersion: flux-framework.org/v1alpha1
+kind: HTCondor
+metadata:
+  labels:
+    app.kubernetes.io/name: htcondor
+    app.kubernetes.io/instance: htcondor-sample
+    app.kubernetes.io/part-of: htcondor-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: htcondor-operator
+  name: htcondor-sample
+  namespace: htcondor-operator
+spec:
+
+  # One config manager, one submission node, and two workers (actual size 4)
+  size: 2
+
+  # Interactive mode to keep it running (sleeps after cluster start)
+  interactive: true
+
+  # use an ubuntu base for the worker and server
+  manager:    
+    # Note that number of processes matches nodes 2 above. We could also add --cpus instead of --nodes
+    command: echo hello world
