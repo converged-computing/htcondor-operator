@@ -2,7 +2,7 @@
 
 > Let's make one for HTCondor too!
 
-This will be an operator that attempts to use [htcondor](https://github.com/htcondor/htcondor) to create a cluster to run tasks. Note that I'm going off of the list [here])(https://github.com/dask/dask-jobqueue/tree/main/ci) (plus Flux). We will use the design and referenced docker-compose [from here](https://github.com/dask/dask-jobqueue/blob/main/ci/htcondor/docker-compose.yml),
+This will be an operator that attempts to use [htcondor](https://github.com/htcondor/htcondor) to create a cluster to run tasks. Note that I'm going off of the list [here](https://github.com/dask/dask-jobqueue/tree/main/ci) (plus Flux). We will use the design and referenced docker-compose [from here](https://github.com/dask/dask-jobqueue/blob/main/ci/htcondor/docker-compose.yml),
 and the base images [are here](https://github.com/htcondor/htcondor/tree/main/build/docker/services).
 
 ## Development
@@ -35,11 +35,15 @@ You'll need to install the jobset API, which eventually will be added to Kuberne
 VERSION=v0.1.3
 kubectl apply --server-side -f https://github.com/kubernetes-sigs/jobset/releases/download/$VERSION/manifests.yaml
 ```
-or development version (this is what I did):
+or development (main) version:
 
 ```bash
 $ kubectl apply --server-side -k github.com/kubernetes-sigs/jobset/config/default?ref=main
+```
 
+But if you need a previous version (e.g., the current main is v1alpha2, and I want to use v1alpha1 until there is an official release) you can install from a commit:
+
+```
 # This is right before upgrade to v1alpha2, or June 2nd when I was testing!
 # This is also a strategy for deploying a test version
 git clone https://github.com/kubernetes-sigs/jobset /tmp/jobset
@@ -50,7 +54,7 @@ IMAGE_TAG=vanessa/jobset:test make image-push
 IMAGE_TAG=vanessa/jobset:test make deploy
 ```
 
-Generate the custom resource definition
+Then (back in the operator directory here) you can generate the custom resource definition
 
 ```bash
 # Build and push the image, and generate the examples/dist/htcondor-operator-dev.yaml
@@ -84,7 +88,7 @@ Create a "hello-world" interactive cluster:
 $ kubectl apply -f examples/tests/hello-world/htcondor.yaml 
 ```
 
-Ensure pods are running:
+Ensure pods are running (it will take about a minute to pull the containers):
 
 ```bash
 $ make list
@@ -115,14 +119,29 @@ You can look at their logs to see the cluster running:
 2023-06-18 21:23:09,857 INFO success: condor_master entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
 ```
 
-Now let's shell into submit and see if we can interact! This is only the second time I'll use htcondor so with me luck :)
+I found that if I shell into the submit node right away, it will tell me it can't reach the host.
+But I've also seen it go up more quickly, so I'm not sure. I need to use it more to reflect.
+For now let's shell into submit and see if we can interact! This is only the second time I'll use htcondor so with me luck :)
 
 ```bash
 $ kubectl exec -it -n htcondor-operator htcondor-sample-submit-0-0-jfbh6 bash
 ```
 
+The working queue should look like this:
+
+```bash
+$ condor_q
+```
+```console
+-- Schedd: htcondor-sample-submit-0-0.htc-service.htcondor-operator.svc.cluster.local : <10.244.0.8:40519?... @ 06/19/23 00:53:49
+OWNER BATCH_NAME      SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
+
+Total for query: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended 
+Total for all users: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
+```
+
 I think the instructions we want are for [condor_submit](https://htcondor.readthedocs.io/en/latest/users-manual/submitting-a-job.html)
-and it also looks like we need a submit file for that, let's write one:
+and it also looks like we need a submit file for that, let's write one, and saving logs to `/tmp` for now.
 
 ```bash
 tee -a submit.sh <<EOF
@@ -134,72 +153,49 @@ tee -a submit.sh <<EOF
 executable   = /usr/bin/echo
 arguments    = hello world
 
-output       = hello-world.out
-error        = hello-world.err
-log          = hello-world.log
+output       = /tmp/hello-world.out
+error        = /tmp/hello-world.err
+log          = /tmp/hello-world.log
 
 request_cpus   = 1
 queue
 EOF
 ```
 
-Note that it takes 5-10 minutes for the cluster to start working? At least for me I got hangs and errors and then
-magically I got a response... here is how to see the Q
+Note that if you don't write to `/tmp`, you can get a permission denied error, and you can look in `cat /var/log/condor/ShadowLog`
+to see the error. In a real world setup you would be running as a condor user, and not root, but we are just playing
+around for now. Here is how to submit the job:
 
 ```bash
-$ condor_q
-
-
--- Schedd: htcondor-sample-submit-0-0.htc-service.htcondor-operator.svc.cluster.local : <10.244.0.86:34081?... @ 06/18/23 23:14:58
-OWNER BATCH_NAME      SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
-
-Total for query: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended 
-Total for all users: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
+$ condor_submit ./submit.sh
 ```
 
-and then when I submit:
+If you quickly look at the queue you'd see it, but it seems to run so fast that I missed it! But I can see the output:
 
 ```bash
-$ condor_submit submit.sh 
-Submitting job(s).
-1 job(s) submitted to cluster 2.
+$ cat /tmp/hello-world.out
+hello world
 ```
 
-I don't see anything running - I need to ask someone that knows how this works (or keep debugging myself). It's at least
-a good start.
-
-```bash
-$ condor_q
-
-
--- Schedd: htcondor-sample-submit-0-0.htc-service.htcondor-operator.svc.cluster.local : <10.244.0.86:34081?... @ 06/18/23 23:16:51
-OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
-condor ID: 1        6/18 23:15      _      _      1      1 1.0
-
-Total for query: 1 jobs; 0 completed, 0 removed, 1 idle, 0 running, 0 held, 0 suspended 
-Total for all users: 1 jobs; 0 completed, 0 removed, 1 idle, 0 running, 0 held, 0 suspended
-```
-
-This doesn't give any more information:
-
-```bash
-$ condor_q -analyze
-```
-
-Note that you can find some logs here:
+Important for debugging - you can find some logs here:
 
 ```bash
 $ cat /var/log/condor/              
-.master_address      ProcLog              ScheddRestartReport  
-MasterLog            SchedLog             SharedPortLog        
+.master_address      MasterLog            ProcLog              SchedLog             ScheddRestartReport
+ShadowLog            SharedPortLog        XferStatsLog         transfer_history  
 ```
+
+I found the ShadowLog helpful for debugging submits, and the Master/SchedLog helpful too!
+And that's it for now - I am next going to try to use these images to prepare something that can run LAMMPS.
+We could also try a container - I will likely do both.
 
 ## TODO
 
-- Why is idle?
-- A non-interactive submit needs to write a submission file
-- Tweak the configs to get envars that have the cluster size
+- A non-interactive submit needs to write a submission file (might not be needed)
+- Tweak the configs to get envars that have the cluster size (right now just hard coded to 2)
+- Test out [containers](https://chtc.cs.wisc.edu/uw-research-computing/docker-jobs)
 - LAMMPS example working
+
 
 ## License
 

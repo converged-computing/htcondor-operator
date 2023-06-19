@@ -63,6 +63,19 @@ type HTCondorSpec struct {
 	// Resources include limits and requests
 	// +optional
 	Resources Resource `json:"resources"`
+
+	// Security Context
+	// These are applied to all nodes
+	// https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+	// +optional
+	SecurityContext SecurityContext `json:"securityContext"`
+}
+
+type SecurityContext struct {
+
+	// Privileged container
+	// +optional
+	Privileged bool `json:"privileged,omitempty"`
 }
 
 type Config struct {
