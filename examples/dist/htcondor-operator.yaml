@@ -178,6 +178,13 @@ spec:
                   x-kubernetes-int-or-string: true
                 description: Resources include limits and requests
                 type: object
+              securityContext:
+                description: Security Context These are applied to all nodes https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+                properties:
+                  privileged:
+                    description: Privileged container
+                    type: boolean
+                type: object
               serviceName:
                 description: Name for the cluster service
                 type: string

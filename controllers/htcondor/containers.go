@@ -66,6 +66,9 @@ func (r *HTCondorReconciler) getContainers(
 		TTY:             true,
 		Resources:       resources,
 		Command:         command,
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: &cluster.Spec.SecurityContext.Privileged,
+		},
 	}
 
 	// Ports and environment
