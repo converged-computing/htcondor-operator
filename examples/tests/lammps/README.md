@@ -36,6 +36,37 @@ Total for query: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 su
 Total for all users: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
 ```
 
+For a parallel universe job to work, we need dedicated nodes. You should see:
+
+```bash
+$ condor_status -const '!isUndefined(DedicatedScheduler)' \
+      -format "%s\t" Machine -format "%s\n" DedicatedScheduler
+```
+```console
+htcondor-sample-execute-0-0.htc-service.htcondor-operator.svls c.cluster.local     DedicatedScheduler@htcondor-sample-manager-0-0.htc-service.htcondor-operator.svc.cluster.local
+htcondor-sample-execute-0-1.htc-service.htcondor-operator.svc.cluster.local     DedicatedScheduler@htcondor-sample-manager-0-0.htc-service.htcondor-operator.svc.cluster.local
+```
+
+We can first test a simple "parallel universe" job:
+
+```
+tee -a submit.sh <<EOF
+universe = parallel
+executable = /bin/sleep
+arguments = 5
+machine_count = 2
+output = /tmp/sleep.out
+error = /tmp/sleep.err
+log = /tmp/sleep.log
+request_cpus   = 1
+
+queue
+EOF
+```
+
+That should work:
+
+
 Write your job file:
 
 ```bash

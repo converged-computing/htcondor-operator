@@ -55,6 +55,10 @@ func getVolumes(cluster *api.HTCondor) []corev1.Volume {
 			Path: "start-submit.sh",
 			Mode: &makeExecutable,
 		},
+		//		{
+		//			Key:  tokenKey,
+		//			Path: "token",
+		//		},
 	}
 
 	volumes := []corev1.Volume{
@@ -70,6 +74,7 @@ func getVolumes(cluster *api.HTCondor) []corev1.Volume {
 					// /htcondor_operator/start-manager.sh
 					// /htcondor_operator/start-execute.sh
 					// /htcondor_operator/start-submit.sh
+					// /htcondor_operator/token -> /root/secrets/token
 					Items: runnerScripts,
 				},
 			},
