@@ -164,6 +164,14 @@ func (r *HTCondorReconciler) getConfigMap(
 		data["start-manager"] = managerStart
 		data["start-execute"] = executeStart
 		data["start-submit"] = submitStart
+
+		// This will be copied into
+		// /root/secrets/token
+		//token, err := r.getToken(ctx, cluster)
+		//if err != nil || token == "" {
+		//	return cm, ctrl.Result{Requeue: true}, err
+		//}
+		//data[tokenKey] = token
 	}
 
 	// Create the config map with respective data!

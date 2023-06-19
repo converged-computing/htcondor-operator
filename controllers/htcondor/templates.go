@@ -32,6 +32,9 @@ var startSubmitTemplate string
 //go:embed templates/components.sh
 var startComponents string
 
+//go:embed templates/token.sh
+var tokenTemplate string
+
 // NodeTemplate populates a node entrypoint
 type NodeTemplate struct {
 	Node        api.Node

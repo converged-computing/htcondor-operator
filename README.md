@@ -191,11 +191,11 @@ We could also try a container - I will likely do both.
 
 ## TODO
 
+Grab one of these if you'd like to contribute!
+
 - A non-interactive submit needs to write a submission file (might not be needed)
 - Tweak the configs to get envars that have the cluster size (right now just hard coded to 2)
 - Test out [containers](https://chtc.cs.wisc.edu/uw-research-computing/docker-jobs)
-- LAMMPS example working
-
 
 ## License
 
